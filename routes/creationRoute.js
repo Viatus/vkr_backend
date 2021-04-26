@@ -15,7 +15,7 @@ const {
 	removeCreation,
 } = require('../controllers/creationController');
 
-router.post('/genres', verifyToken, addCreationType);
+router.post('/genres', /*verifyToken,*/ addCreationType);
 router.get('/genres', getAllCreationTypes);
 router.get('/creations/:id', getCreationById);
 router.get('/creations', getAllCreations);

@@ -52,6 +52,31 @@ module.exports = {
           },
         }
       );
+    }).then(() => {
+      queryInterface.addColumn(
+        'Reviews',
+        'ClientId',
+        {
+          allowNull: false,
+          type: Sequelize.INTEGER,
+          references: {
+            model: 'Clients',
+            key: 'id'
+          }
+        }
+      )
+    }).then(() => {
+      queryInterface.addColumn(
+        'Reviews',
+        'CreationId',
+        {
+          type: Sequelize.INTEGER,
+          references: {
+            model: 'Creations',
+            key: 'id'
+          }
+        }
+      )
     });
   },
   down: (queryInterface, Sequelize) => {
@@ -70,6 +95,16 @@ module.exports = {
       );
     }).then(() => {
       return queryInterface.dropTable('Creation_tags');
+    }).then(() => {
+      return queryInterface.removeColumn(
+        'Reviews',
+        'ClientId'
+      );
+    }).then(() => {
+      return queryInterface.removeColumn(
+        'Reviews',
+        'CreationId'
+      );
     });
   }
 };

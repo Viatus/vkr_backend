@@ -14,6 +14,8 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsTo(models.Creations);
       this.belongsTo(models.Creation_types);
       this.belongsToMany(models.Tags, {through: 'Creation_tags'});
+      this.belongsToMany(models.Authors, {through: 'Participation'});
+      this.belongsToMany(models.Roles, {through: 'Participation'});
     }
   };
   Creation.init({

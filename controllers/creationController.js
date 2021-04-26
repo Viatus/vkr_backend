@@ -40,7 +40,7 @@ const addCreationRecord = async (req, res) => {
                     return res.status(500).json({ error: `error while adding tag: ${err.message}` });
                 });
             }
-            return res.status(0).json({ message: 'success' });
+            return res.status(200).json({ message: 'success' });
         } catch (error) {
             return res.status(500).json({ error: error.message })
         }
@@ -54,7 +54,7 @@ const getAllCreations = async (req, res) => {
     if (req.query.sort_param === undefined) {
         req.query.sort_param = 'name';
     }
-    models.Creations.findAll({ attributes: ['id', 'name'], where: { current: true }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+    models.Creations.findAll({ attributes: ['id', 'name', 'CreationTypeId'], where: { current: true }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
         return res.json({ result });
     }).catch((err) => {
         return res.status(500).json({ error: err.message })

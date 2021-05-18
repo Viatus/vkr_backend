@@ -19,7 +19,6 @@ module.exports = (sequelize, DataTypes) => {
     birthday: DataTypes.DATE,
     description: DataTypes.STRING,
     current: DataTypes.BOOLEAN,
-    current: DataTypes.BOOLEAN,
     approvedAt: DataTypes.DATE,
     AuthorId: DataTypes.INTEGER
   }, {

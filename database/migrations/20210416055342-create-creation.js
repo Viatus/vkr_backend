@@ -31,6 +31,9 @@ module.exports = {
       date_updated: {
         allowNull: false,
         type: Sequelize.DATE
+      },
+      image_uuid: {
+        type: Sequelize.INTEGER
       }
     });
   },

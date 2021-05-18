@@ -1,12 +1,22 @@
 const { Sequelize } = require('../database/models');
 const models = require('../database/models');
 const creation = require('../database/models/creation');
+const Op = Sequelize.Op
 
 const addCreationType = async (req, res) => {
-    //И тут проверки думаю появятся, ну хоть какие то(на админа в том числе)
+    //Временно закоментировано
+    /*if (!req.client.is_admin) {
+        return res.status(500).json({ error: "Недостаточно привелегий" }); //Поменять статус
+    }*/
+    if (req.body.name === undefined) {
+        return res.status(500).json({ error: "Отсутствует имя" }); //Поменять статус
+    }
+    if (req.body.description === undefined) {
+        return res.status(500).json({ error: "Отсутствует имя" }); //Поменять статус
+    }
     try {
-        const newCreation = await models.Creation_types.create({ name: req.body.name, description: req.body.description });
-        console.log(newCreation);
+        const newCreationType = await models.Creation_types.create({ name: req.body.name, description: req.body.description });
+        console.log(newCreationType);
         return res.status(200).json({ message: 'success' });
     } catch (error) {
         return res.status(500).json({ error: error.message })
@@ -14,8 +24,6 @@ const addCreationType = async (req, res) => {
 }
 
 const getAllCreationTypes = async (req, res) => {
-    //Проверки проверочки не нужны наконец
-
     models.Creation_types.findAll().then((result) => {
         return res.json({ result });
     }).catch((err) => {
@@ -24,26 +32,46 @@ const getAllCreationTypes = async (req, res) => {
 }
 
 const addCreationRecord = async (req, res) => {
-    //Тут будут проверки разные
+    if (req.body.name === undefined) {
+        return res.status(500).json({ error: "Отсутствует имя" }); //Поменять статус
+    }
+    if (req.body.creation_type === undefined) {
+        return res.status(500).json({ error: "Отсутствует жанр" }); //Поменять статус
+    }
+
+    //Добавить UUID картинки к базе: готово?
 
     models.Creation_types.findOne({ where: { name: req.body.creation_type } }).then(async (result) => {
         try {
-            //ПРоверочка
-            const newCreation = await models.Creations.create({ name: req.body.name, CreationTypeId: result.id, date_published: req.body.date_published, description: req.body.description, is_approved: false, country: req.body.country, age_rating: req.body.age_rating, ClientId: req.client.id, current: false, date_updated: "2020-01-01 19:20:00" });
+            if (result === undefined) {
+                return res.status(500).json({ error: "Отсутствует жанр" });
+            }
+            const newCreation = await models.Creations.create({ name: req.body.name, CreationTypeId: result.id, date_published: req.body.date_published, description: req.body.description, is_approved: false, country: req.body.country, age_rating: req.body.age_rating, ClientId: req.client.id, current: false, date_updated: "2020-01-01 19:20:00", image_uuid: req.image_uuid });
             console.log(newCreation);
-            for (var tag of req.body.tags) {
+            //req.creation_id = newCreation.id;
+            console.log(req.body.tags);
+            let decoded_tags = JSON.parse(req.body.tags);
+            console.log(decoded_tags[0]);
+            for (var tag of decoded_tags) {
                 models.Tags.findOne({ where: { name: tag } }).then((result) => {
-                    //Проверочка
-                    console.log(result);
-                    newCreation.addTag(result);
+                    if (result !== undefined) {
+                        console.log(result);
+                        newCreation.addTag(result);
+                    }
                 }).catch((err) => {
                     return res.status(500).json({ error: `error while adding tag: ${err.message}` });
                 });
             }
-            return res.status(200).json({ message: 'success' });
+
+            console.log(newCreation);
+            return res.status(200).json({ result: newCreation });
         } catch (error) {
+            console.log(error.message);
             return res.status(500).json({ error: error.message })
         }
+    }).catch((err) => {
+        console.log(err.message);
+        return res.status(500).json({ error: err.message });
     });
 };
 
@@ -71,7 +99,12 @@ const getCreationById = async (req, res) => {
 }
 
 const addTag = async (req, res) => {
-    //И тут проверок накину
+    if (req.body.name === undefined) {
+        return res.status(500).json({ error: "Отсутствует имя" }); //Поменять статус
+    }
+    if (req.body.description === undefined) {
+        return res.status(500).json({ error: "Отсутствует имя" }); //Поменять статус
+    }
     try {
         const newCreation = await models.Tags.create({ name: req.body.name, description: req.body.description });
         console.log(newCreation);
@@ -81,22 +114,7 @@ const addTag = async (req, res) => {
     }
 };
 
-const removeCreation = async (req,res) => {
-	//Проверочку на админа надо добавить
-	
-	models.Creations.findOne({ where: { id: req.params.id } }).then(async (result) => {
-        result.destroy().then( (result2) => {
-			return res.status(200).json({ message: 'success' });
-		});
-    }).catch((err) => {
-        return res.status(500).json({ error: err.message })
-    });
-
-}
-
 const getAllTags = async (req, res) => {
-    //Проверки проверочки не нужны наконец
-
     models.Tags.findAll().then((result) => {
         return res.json({ result });
     }).catch((err) => {
@@ -104,12 +122,30 @@ const getAllTags = async (req, res) => {
     });
 }
 
-const approveCreation = async (req, res) => {
-    //Точно проверка на админа появится
 
-    //А еще тут трай-кетч появится
-	
-	//А еще надо добавить возможность внесения изменений админом
+const removeCreation = async (req, res) => {
+    //Временно закомментировано
+    /*if (!req.client.is_admin) {
+        return res.status(500).json({ error: "Отсутствует имя" }); //Поменять статус
+    }*/
+
+    models.Creations.findOne({ where: { id: req.params.id } }).then(async (result) => {
+        result.destroy().then((result2) => {
+            return res.status(200).json({ message: 'success' });
+        });
+    }).catch((err) => {
+        return res.status(500).json({ error: err.message })
+    });
+}
+
+
+const approveCreation = async (req, res) => {
+    //Временно закоментировано
+    /*if (!req.client.is_admin) {
+        return res.status(500).json({ error: "Недостаточно привелегий" }); //Поменять статус
+    }*/
+
+    //Посмотреть в сторону внесений изменений при принятии
 
     models.Creations.findOne({ where: { id: req.body.new_record_id } }).then(async (result) => {
         if (result === undefined) {
@@ -123,7 +159,7 @@ const approveCreation = async (req, res) => {
                     second_result.current = false;
                     second_result.save();
                 }*/
-                return res.status(200).json({ message: 'success' });
+            return res.status(200).json({ message: 'success' });
             //});
         });
 
@@ -133,9 +169,9 @@ const approveCreation = async (req, res) => {
 
 const getSimilarCreationsOnTagsById = async (req, res) => {
     //Проверки?
-	console.log(req.body.creation_id);
+    console.log(req.body.creation_id);
     models.Tags.findAll({ include: [{ model: models.Creations, through: 'Creation_Tags', where: { id: req.headers.creation_id } }] }).then((result) => {
-		var ids = [];
+        var ids = [];
         for (tag of result) {
             ids.push(tag.id);
         }
@@ -157,24 +193,21 @@ const getSimilarCreationsOnTagsById = async (req, res) => {
                 topRecs.push(key);
                 topN--;
                 console.log(key + ' ' + value);
-                if (topN <=0) {
+                if (topN <= 0) {
                     break;
                 }
             }
 
             console.log([...tagMap]);
-			const resultTopRecs = new Object();
-			resultTopRecs.data = topRecs;
-			models.Creations.findAll({ where: {id: topRecs}}).then((result) => {
-				return res.json({result});
-			}).catch((err) => {
-			});
-            
-            //return res.json(resultTopRecs);
+            const resultTopRecs = new Object();
+            resultTopRecs.data = topRecs;
+            models.Creations.findAll({ where: { id: topRecs } }).then((result) => {
+                return res.json({ result });
+            }).catch((err) => {
+            });
         });
     }).catch((err) => {
-			console.log(err);
-
+        console.log(err);
         return res.status(500).json({ error: err.message })
 
     });
@@ -182,16 +215,50 @@ const getSimilarCreationsOnTagsById = async (req, res) => {
 }
 
 const getUnapprovedCreations = async (req, res) => {
-	    if (req.query.sort_order === undefined) {
+    if (req.query.sort_order === undefined) {
         req.query.sort_order = 'ASC';
     }
     if (req.query.sort_param === undefined) {
         req.query.sort_param = 'name';
     }
-    models.Creations.findAll({ attributes: ['id', 'name'], where: { current: false }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+    models.Creations.findAll({ attributes: ['id', 'name'], where: { current: false }, order: [[req.query.sort_param, req.query.sort_order]] }).then((result) => {
         return res.json({ result });
     }).catch((err) => {
-        return res.status(500).json({ error: err.message })
+        return res.status(500).json({ error: err.message });
+    });
+}
+
+const searchCreations = async (req, res) => {
+    if (req.query.string === undefined) {
+        req.query.string = "";
+    }
+    req.query.string += "%";
+    if (req.query.sort_order === undefined) {
+        req.query.sort_order = 'ASC';
+    }
+    if (req.query.sort_param === undefined) {
+        req.query.sort_param = 'name';
+    }
+    if (req.query.limit === undefined) {
+        req.query.limit = 5;
+    }
+
+    models.Creations.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string }, current: true }, order: [[req.query.sort_param, req.query.sort_order]], limit: req.query.limit }).then((result) => {
+        return res.json({ result });
+    }).catch((err) => {
+        return res.status(500).json({ error: err.message });
+    });
+}
+
+const getCreationTags = async (req, res) => {
+    if (req.params.id === undefined) {
+        //Кинуть ошибку
+    }
+
+    models.Tags.findAll({ include: [{ model: models.Creations, through: 'Creation_Tags', where: { id: req.params.id } }] }).then((result) => {
+        return res.json({ result });
+    }).catch((err) => {
+        return res.status(500).json({ error: err.message });
     });
 }
 
@@ -205,6 +272,8 @@ module.exports = {
     approveCreation,
     getAllTags,
     getSimilarCreationsOnTagsById,
-	getUnapprovedCreations,
-	removeCreation,
+    getUnapprovedCreations,
+    removeCreation,
+    searchCreations,
+    getCreationTags,
 }

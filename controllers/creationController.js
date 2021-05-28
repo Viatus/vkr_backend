@@ -1,6 +1,5 @@
 const { Sequelize } = require('../database/models');
 const models = require('../database/models');
-const creation = require('../database/models/creation');
 const Op = Sequelize.Op
 
 const addCreationType = async (req, res) => {
@@ -90,9 +89,35 @@ const getAllCreations = async (req, res) => {
 
 };
 
+const getAllCreationsByUser = async (req, res) => {
+    if (req.query.sort_order === undefined) {
+        req.query.sort_order = 'ASC';
+    }
+    if (req.query.sort_param === undefined) {
+        req.query.sort_param = 'name';
+    }
+    models.Creations.findAll({ attributes: ['id', 'name', 'CreationTypeId'], where: { current: true, ClientId: req.client.id }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+        return res.json({ result });
+    }).catch((err) => {
+        return res.status(500).json({ error: err.message })
+    });
+
+};
+
 const getCreationById = async (req, res) => {
     models.Creations.findOne({ where: { id: req.params.id } }).then(async (result) => {
-        return res.json({ result });
+        models.Reviews.findAll({ where: { CreationId: req.params.id }, attributes: ["score"] }).then((result2) => {
+            const amount = result2.length;
+            var sum = 0;
+            for (var i = 0; i < amount; i++) {
+                sum += result2[i].score;
+            }
+            const avg = sum / amount;
+            result.dataValues.rating = avg;
+            return res.json({ result });
+        }).catch((err) => {
+            return res.status(500).json(err);
+        });
     }).catch((err) => {
         return res.status(500).json({ error: err.message })
     });
@@ -199,17 +224,37 @@ const getSimilarCreationsOnTagsById = async (req, res) => {
             }
 
             console.log([...tagMap]);
-            const resultTopRecs = new Object();
-            resultTopRecs.data = topRecs;
+            /*const resultTopRecs = new Object();
+            resultTopRecs.data = topRecs;*/ //Забыл зачем оно написано, пусть полежит
             models.Creations.findAll({ where: { id: topRecs } }).then((result) => {
                 return res.json({ result });
             }).catch((err) => {
+                return res.status(500).json({ error: err.message })
             });
         });
     }).catch((err) => {
         console.log(err);
         return res.status(500).json({ error: err.message })
 
+    });
+
+}
+
+const getSimilarCreationsOnAuthorsById = async (req, res) => {
+    //Можно подправить первый запрос, он ыбл скопирован из другой функции и все что нужно ищет, но можно было б чуть по другому сдлетаь
+    models.Roles.findAll({ include: [{ model: models.Authors, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id } }] }).then((result2) => {
+        let authors = [];
+        for (element of result2) {
+            authors.push(element.Authors[0].id);
+        }
+        models.Creations.findAll({ include: [{ model: models.Authors, through: "Participation", where: { id: authors } }], where: { id: { [Sequelize.Op.not]: req.params.id } } }).then((result) => {
+            result.sort((a, b) => (a.dataValues.Authors.length > b.dataValues.Authors.length) ? -1 : (b.dataValues.Authors.length > a.dataValues.Authors.length) ? 1 : 0);
+            return res.status(200).json({ result });
+        }).catch((error) => {
+            return res.status(500).json({ error: error.message });
+        });
+    }).catch((error) => {
+        return res.status(500).json({ error: error.message });
     });
 
 }
@@ -221,7 +266,21 @@ const getUnapprovedCreations = async (req, res) => {
     if (req.query.sort_param === undefined) {
         req.query.sort_param = 'name';
     }
-    models.Creations.findAll({ attributes: ['id', 'name'], where: { current: false }, order: [[req.query.sort_param, req.query.sort_order]] }).then((result) => {
+    models.Creations.findAll({ attributes: ['id', 'name', 'CreationTypeId'], where: { current: false }, order: [[req.query.sort_param, req.query.sort_order]] }).then((result) => {
+        return res.json({ result });
+    }).catch((err) => {
+        return res.status(500).json({ error: err.message });
+    });
+}
+
+const getUnapprovedCreationsByUser = async (req, res) => {
+    if (req.query.sort_order === undefined) {
+        req.query.sort_order = 'ASC';
+    }
+    if (req.query.sort_param === undefined) {
+        req.query.sort_param = 'name';
+    }
+    models.Creations.findAll({ attributes: ['id', 'name', 'CreationTypeId'], where: { current: false, ClientId: req.client.id }, order: [[req.query.sort_param, req.query.sort_order]] }).then((result) => {
         return res.json({ result });
     }).catch((err) => {
         return res.status(500).json({ error: err.message });
@@ -242,8 +301,11 @@ const searchCreations = async (req, res) => {
     if (req.query.limit === undefined) {
         req.query.limit = 5;
     }
+    if (req.query.page === undefined) {
+        req.query.page = 1;
+    }
 
-    models.Creations.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string }, current: true }, order: [[req.query.sort_param, req.query.sort_order]], limit: req.query.limit }).then((result) => {
+    models.Creations.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string }, current: true }, order: [[req.query.sort_param, req.query.sort_order]], limit: req.query.limit, offset: (req.query.page - 1) * req.query.limit }).then((result) => {
         return res.json({ result });
     }).catch((err) => {
         return res.status(500).json({ error: err.message });
@@ -276,4 +338,7 @@ module.exports = {
     removeCreation,
     searchCreations,
     getCreationTags,
+    getSimilarCreationsOnAuthorsById,
+    getAllCreationsByUser,
+    getUnapprovedCreationsByUser,
 }

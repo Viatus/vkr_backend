@@ -13,14 +13,14 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsTo(models.Clients);
       this.belongsTo(models.Creations);
       this.belongsTo(models.Creation_types);
-      this.belongsToMany(models.Tags, {through: 'Creation_tags'});
-      this.belongsToMany(models.Authors, {through: 'Participation'});
-      this.belongsToMany(models.Roles, {through: 'Participation'});
-      this.hasMany(models.Reviews, {as: "creation_reviews"});
+      this.hasMany(models.Creation_Names);
+      this.belongsToMany(models.Tags, { through: 'Creation_tags' });
+      this.belongsToMany(models.Authors, { through: 'Participation' });
+      this.belongsToMany(models.Roles, { through: 'Participation' });
+      this.hasMany(models.Reviews, { as: "creation_reviews" });
     }
   };
   Creation.init({
-    name: DataTypes.STRING,
     CreationTypeId: DataTypes.INTEGER,
     date_published: DataTypes.DATE,
     description: DataTypes.STRING,

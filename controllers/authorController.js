@@ -1,33 +1,41 @@
 const models = require('../database/models');
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../database/models');
+const {
+    StatusCodes,
+} = require('http-status-codes');
 
 const addAuthor = async (req, res) => {
-    if (req.client === undefined) {
-
-    }
     if (req.body.name === undefined) {
-
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Отстутствует имя автора' });
     }
     if (req.body.description === undefined) {
-
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Отстутствует описание автора' });
     }
 
     try {
-        const newAuthor = await models.Authors.create({ name: req.body.name, birthday: req.body.birthday, description: req.body.description, country: req.body.country, ClientId: req.client.id, current: false });
+        const newAuthor = await models.Authors.create({ name: req.body.name, birthday: req.body.birthday, description: req.body.description/*, country: req.body.country Оказывается я забыл это поле добавить в базу, бывает*/, ClientId: req.client.id, current: false });
         console.log(newAuthor);
-        return res.status(200).json({ message: 'success' });
+        return res.status(StatusCodes.CREATED).json({ newAuthor });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
     }
+};
+
+const getAuthorById = async (req, res) => {
+    models.Authors.findOne({ where: { id: req.params.id } }).then(async (result) => {
+        return res.status(StatusCodes.OK).json({ result });
+    }).catch((err) => {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
+    });
 };
 
 const approveAuthor = async (req, res) => {
     if (!req.is_admin) {
-
+        return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Недостаточно прав' });
     }
 
-    models.Authors.findOne({ where: { id: req.body.new_record_id } }).then(async (result) => {
+    models.Authors.findOne({ where: { id: req.params.id } }).then(async (result) => {
         if (result === undefined) {
             return res.status(500).json({ error: "Author does not exist" });
         }
@@ -39,36 +47,40 @@ const approveAuthor = async (req, res) => {
                     second_result.current = false;
                     second_result.save();
                 }*/
-            return res.status(200).json({ message: 'success' });
+            return res.status(StatusCodes.OK).json({ message: 'success' });
             //});
+        }).catch((err) => {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
         });
 
+    }).catch((err) => {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
     });
 };
 
 const addRole = async (req, res) => {
     if (!req.is_admin) {
-
+        return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Недостаточно прав' });
     }
     if (req.body.name === undefined || req.body.description === undefined) {
-
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Отстутствует имя или описание роли' });
     }
 
     try {
         const newRole = await models.Roles.create({ name: req.body.name, description: req.body.description });
         console.log(newRole);
-        return res.status(200).json({ message: 'success' });
+        return res.status(StatusCodes.CREATED).json({ newRole });
     } catch (error) {
-        return res.status(500).json({ error: error.message })
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message })
     }
 
 };
 
 const getRoles = async (req, res) => {
     models.Roles.findAll().then((result) => {
-        return res.json({ result });
+        return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
-        return res.status(500).json({ error: err.message })
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
     });
 };
 
@@ -80,11 +92,10 @@ const getAuthors = async (req, res) => {
         req.query.sort_param = 'name';
     }
     models.Authors.findAll({ attributes: ['id', 'name'], /*where: { current: true },*/ order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
-        return res.json({ result });
+        return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
-        return res.status(500).json({ error: err.message })
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
     });
-
 };
 
 const getUnapprovedAuthors = async (req, res) => {
@@ -95,42 +106,42 @@ const getUnapprovedAuthors = async (req, res) => {
         req.query.sort_param = 'name';
     }
     models.Authors.findAll({ attributes: ['id', 'name'], where: { current: false }, order: [[req.query.sort_param, req.query.sort_order]] }).then((result) => {
-        return res.json({ result });
+        return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
-        return res.status(500).json({ error: err.message });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message });
     });
 };
 
 const addAuthorRoleInCreation = async (req, res) => {
-    console.log(req.body.author_id);
-    console.log(req.body.role_id);
-    console.log(req.body.creation_id);
+    if (req.body.author_id === undefined || req.body.role_id === undefined || req.body.creation_id ===undefined) {
+        return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Отстутствует id автороа, произведения или роли' });
+    }
     try {
         //перед этим еще чекнуть не существует ли оно
         sequelize.query('INSERT INTO "Participation"("AuthorId", "CreationId", "RoleId") VALUES(?,?,?)', {
             replacements: [req.body.author_id, req.body.creation_id, req.body.role_id],
             type: QueryTypes.INSERT
         });
-        return res.status(200).json({ message: 'success' });
+        return res.status(StatusCodes.OK).json({ message: 'success' });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
     }
 };
 
 const getAuthorsRoles = async (req, res) => {
     //Добавить where current
-    models.Creations.findAll({ include: [{ model: models.Authors, through: "Participation", where: { id: req.params.id } }, { model: models.Roles, through: "Particiaption" }] }).then((result) => {
-        return res.status(200).json({ result });
+    models.Creations.findAll({ include: [{ model: models.Authors, attributes: [], through: "Participation", where: { id: req.params.id } }, { model: models.Roles, through: "Participation" }, { model: models.Creation_Names, attributes: ['name'] }] }).then((result) => {
+        return res.status(StatusCodes.OK).json({ result });
     }).catch((error) => {
-        return res.status(500).json({ error: error.message });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
     });
 };
 
 const getInvolvedInCreation = async (req, res) => {
-    models.Roles.findAll({ include: [{ model: models.Authors, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id } }] }).then((result) => {
-        return res.status(200).json({ result });
+    models.Roles.findAll({ include: [{ model: models.Authors, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id }, include: [{ model: models.Creation_Names, attributes: ['name'] }] }] }).then((result) => {
+        return res.status(StatusCodes.OK).json({ result });
     }).catch((error) => {
-        return res.status(500).json({ error: error.message });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
     });
 };
 
@@ -145,4 +156,5 @@ module.exports = {
     addAuthorRoleInCreation,
     getAuthorsRoles,
     getInvolvedInCreation,
+    getAuthorById,
 }

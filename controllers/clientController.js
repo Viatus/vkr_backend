@@ -2,6 +2,9 @@ const models = require('../database/models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const saltRounds = 10;
+const {
+    StatusCodes,
+} = require('http-status-codes');
 
 const registerClient = async (req, res) => {
     const { nickname, email, password } = req.body;
@@ -13,14 +16,14 @@ const registerClient = async (req, res) => {
 
         try {
             const client = await models.Clients.create({ nickname: nickname, email: email, hash: hashedPassword, is_admin: false });
-            return res.status(201).json({
+            return res.status(StatusCodes.CREATED).json({
                 client,
             });
         } catch (error) {
-            return res.status(500).json({ error: error.message })
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message })
         }
     }).catch((err) => {
-        return res.status(500).json({ error: err.message })
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
     });
 }
 
@@ -37,9 +40,9 @@ const loginClient = async (req, res) => {
             const token = await jwt.sign({ email, id }, process.env.secret);
             return res.json({ token: token, is_admin: result.is_admin });
         }
-        return res.status(401);
+        return res.status(StatusCodes.UNAUTHORIZED);
     }).catch((err) => {
-        return res.status(500).json({ error: err.message });
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message });
     });
 }
 

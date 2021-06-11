@@ -6,7 +6,9 @@ module.exports = (sequelize, DataTypes) => {
     is_admin: DataTypes.BOOLEAN
   }, {});
   Client.associate = function(models) {
-    // associations can be defined here
+    this.hasMany(models.Reviews);
+    this.hasMany(models.Creations);
+    this.hasMany(models.Comments);
   };
   return Client;
 };

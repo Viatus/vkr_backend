@@ -18,12 +18,18 @@ module.exports = {
       description: {
         type: Sequelize.STRING
       },
-      current:{
+      country: {
+        type: Sequelize.STRING
+      },
+      current: {
         allowNull: false,
         type: Sequelize.BOOLEAN
       },
       approvedAt: {
         type: Sequelize.DATE
+      },
+      image_uuid: {
+        type: Sequelize.STRING
       }
     });
   },

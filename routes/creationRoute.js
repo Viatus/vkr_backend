@@ -27,6 +27,8 @@ const {
     addCreationRelation,
     getCreationRelationsForCreation,
     getRecommendationsForUser,
+    executeTest,
+    changeCalculateDistanceMethod,
 } = require('../controllers/creationController');
 const { v4: uuidv4 } = require('uuid');
 const path = require("path");
@@ -42,7 +44,7 @@ const storageConfig = multer.diskStorage({
     }
 });
 
-router.post('/genres', /*verifyToken,*/ addCreationType);
+router.post('/genres', verifyToken, addCreationType);
 router.get('/genres', getAllCreationTypes);
 router.get('/genres/:id', getCreationTypeInfo);
 
@@ -51,7 +53,7 @@ router.get('/creations', getAllCreations);
 router.post('/creations', verifyToken, multer({ storage: storageConfig }).any("cover"), addCreationRecord);
 router.put('/creations-unapproved/:id', verifyToken, approveCreation);
 router.get('/creations-similar', getSimilarCreationsOnTagsById);
-router.get('/creations-unapproved', getUnapprovedCreations);
+router.get('/creations-unapproved', verifyToken, getUnapprovedCreations);
 router.get('/creations-search', searchCreations);
 router.get('/creation-tags/:id', getCreationTags);
 router.delete('/creations/:id', removeCreation);
@@ -71,5 +73,9 @@ router.get('/tags', getAllTags);
 router.post('/tags', verifyToken, addTag);
 
 router.get('/user-profile-recs', verifyToken, getRecommendationsForUser);
+
+router.get('/rec-test', executeTest);
+
+router.post('/rec-method', verifyToken, changeCalculateDistanceMethod);
 
 module.exports = router;

@@ -20,7 +20,9 @@ module.exports = (sequelize, DataTypes) => {
     description: DataTypes.STRING,
     current: DataTypes.BOOLEAN,
     approvedAt: DataTypes.DATE,
-    AuthorId: DataTypes.INTEGER
+    AuthorId: DataTypes.INTEGER,
+    image_uuid: DataTypes.STRING,
+    country: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Authors',

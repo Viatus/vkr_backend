@@ -1,9 +1,12 @@
 const models = require('../database/models');
 const { QueryTypes } = require('sequelize');
 const { sequelize } = require('../database/models');
+const { Sequelize } = require('../database/models');
 const {
     StatusCodes,
 } = require('http-status-codes');
+const Op = Sequelize.Op;
+const fs = require('fs')
 
 const addAuthor = async (req, res) => {
     if (req.body.name === undefined) {
@@ -14,7 +17,7 @@ const addAuthor = async (req, res) => {
     }
 
     try {
-        const newAuthor = await models.Authors.create({ name: req.body.name, birthday: req.body.birthday, description: req.body.description/*, country: req.body.country Оказывается я забыл это поле добавить в базу, бывает*/, ClientId: req.client.id, current: false });
+        const newAuthor = await models.Authors.create({ name: req.body.name, birthday: req.body.birthday, description: req.body.description, country: req.body.country, ClientId: req.client.id, current: false, image_uuid: req.image_uuid });
         console.log(newAuthor);
         return res.status(StatusCodes.CREATED).json({ newAuthor });
     } catch (error) {
@@ -24,6 +27,11 @@ const addAuthor = async (req, res) => {
 
 const getAuthorById = async (req, res) => {
     models.Authors.findOne({ where: { id: req.params.id } }).then(async (result) => {
+        const file = `${__dirname}/../authors_covers/${result.dataValues.image_uuid}.jpg`;
+        try {
+            result.dataValues.image = fs.readFileSync(file, 'base64');
+        } catch (err) {
+        }
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
@@ -31,14 +39,24 @@ const getAuthorById = async (req, res) => {
 };
 
 const approveAuthor = async (req, res) => {
-    if (!req.is_admin) {
+    if (!req.client.is_admin) {
         return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Недостаточно прав' });
     }
 
     models.Authors.findOne({ where: { id: req.params.id } }).then(async (result) => {
         if (result === undefined) {
-            return res.status(500).json({ error: "Author does not exist" });
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: "Author does not exist" });
         }
+        if (req.body.description !== undefined) {
+            result.description = req.body.description;
+        }
+        if (req.body.birthday !== undefined) {
+            result.birthday = req.body.birthday;
+        }
+        if (req.body.country !== undefined) {
+            result.country = req.body.country;
+        }
+
         result.current = true;
         //result.CreationId = req.body.old_record_id;
         result.save().then(() => {
@@ -59,7 +77,7 @@ const approveAuthor = async (req, res) => {
 };
 
 const addRole = async (req, res) => {
-    if (!req.is_admin) {
+    if (!req.client.is_admin) {
         return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Недостаточно прав' });
     }
     if (req.body.name === undefined || req.body.description === undefined) {
@@ -91,7 +109,13 @@ const getAuthors = async (req, res) => {
     if (req.query.sort_param === undefined) {
         req.query.sort_param = 'name';
     }
-    models.Authors.findAll({ attributes: ['id', 'name'], /*where: { current: true },*/ order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+    if (req.query.string === undefined) {
+        req.query.string = "%";
+    } else {
+        req.query.string = "%" + req.query.string + "%";
+    }
+
+    models.Authors.findAll({ attributes: ['id', 'name'], where: { current: true }, where: { name: { [Op.like]: req.query.string } }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
@@ -113,7 +137,7 @@ const getUnapprovedAuthors = async (req, res) => {
 };
 
 const addAuthorRoleInCreation = async (req, res) => {
-    if (req.body.author_id === undefined || req.body.role_id === undefined || req.body.creation_id ===undefined) {
+    if (req.body.author_id === undefined || req.body.role_id === undefined || req.body.creation_id === undefined) {
         return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Отстутствует id автороа, произведения или роли' });
     }
     try {

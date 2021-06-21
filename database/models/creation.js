@@ -29,7 +29,8 @@ module.exports = (sequelize, DataTypes) => {
     age_rating: DataTypes.STRING,
     ClientId: DataTypes.INTEGER,
     CreationId: DataTypes.INTEGER,
-    date_updated: DataTypes.DATE
+    date_updated: DataTypes.DATE,
+    image_uuid: DataTypes.STRING
   }, {
     sequelize,
     modelName: 'Creations',

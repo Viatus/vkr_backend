@@ -35,10 +35,10 @@ const loginClient = async (req, res) => {
         const email = result.email;
         const id = result.id;
         const match = await bcrypt.compare(password, hashedPassword);
-
+        const is_admin = result.is_admin;
         if (match) {
-            const token = await jwt.sign({ email, id }, process.env.secret);
-            return res.json({ token: token, is_admin: result.is_admin });
+            const token = await jwt.sign({ email, id, is_admin }, process.env.secret);
+            return res.json({ token: token, is_admin: is_admin });
         }
         return res.status(StatusCodes.UNAUTHORIZED);
     }).catch((err) => {

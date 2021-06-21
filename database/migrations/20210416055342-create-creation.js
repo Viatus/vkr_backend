@@ -29,7 +29,7 @@ module.exports = {
         type: Sequelize.DATE
       },
       image_uuid: {
-        type: Sequelize.INTEGER
+        type: Sequelize.STRING
       }
     });
   },

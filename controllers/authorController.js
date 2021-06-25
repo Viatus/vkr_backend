@@ -85,9 +85,13 @@ const addRole = async (req, res) => {
     }
 
     try {
-        const newRole = await models.Roles.create({ name: req.body.name, description: req.body.description });
-        console.log(newRole);
-        return res.status(StatusCodes.CREATED).json({ newRole });
+        const existingRole = await models.Tags.findOne({ where: { name: req.body.name } });
+        if (existingRole === null) {
+            const newRole = await models.Roles.create({ name: req.body.name, description: req.body.description });
+            console.log(newRole);
+            return res.status(StatusCodes.CREATED).json({ newRole });
+        }
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: "Такая роль уже существует" })
     } catch (error) {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message })
     }

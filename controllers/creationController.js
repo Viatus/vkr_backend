@@ -23,9 +23,14 @@ const addCreationType = async (req, res) => {
         return res.status(StatusCodes.BAD_REQUEST).json({ error: "Отсутствует имя" }); //Поменять статус
     }
     try {
-        const newCreationType = await models.Creation_types.create({ name: req.body.name, description: req.body.description });
-        console.log(newCreationType);
-        return res.status(StatusCodes.CREATED).json({ newCreationType });
+        const existingCreationType = await models.Creation_types.findOne({ where: { name: req.body.name } });
+        if (existingCreationType === null) {
+            const newCreationType = await models.Creation_types.create({ name: req.body.name, description: req.body.description });
+            console.log(newCreationType);
+            return res.status(StatusCodes.CREATED).json({ newCreationType });
+        } else {
+            return res.status(StatusCodes.BAD_REQUEST).json({ error: "Такой жанр уже сущетсвует" })
+        }
     } catch (error) {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message })
     }
@@ -190,9 +195,14 @@ const addTag = async (req, res) => {
         return res.status(StatusCodes.BAD_REQUEST).json({ error: "Отсутствует описание" });
     }
     try {
-        const newTag = await models.Tags.create({ name: req.body.name, description: req.body.description });
-        console.log(newTag);
-        return res.status(StatusCodes.CREATED).json({ newTag });
+        const existingTag = await models.Tags.findOne({ where: { name: req.body.name } });
+        if (existingTag === null) {
+            const newTag = await models.Tags.create({ name: req.body.name, description: req.body.description });
+            console.log(newTag);
+            return res.status(StatusCodes.CREATED).json({ newTag });
+        }
+        return res.status(StatusCodes.BAD_REQUEST).json({ error: "Такой тэг уже существует" })
+
     } catch (error) {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message })
     }

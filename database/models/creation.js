@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       this.belongsTo(models.Clients);
-      this.belongsTo(models.Creations);
       this.belongsTo(models.Creation_types);
       this.hasMany(models.Creation_Names);
       this.belongsToMany(models.Tags, { through: 'Creation_tags' });
@@ -28,7 +27,6 @@ module.exports = (sequelize, DataTypes) => {
     country: DataTypes.STRING,
     age_rating: DataTypes.STRING,
     ClientId: DataTypes.INTEGER,
-    CreationId: DataTypes.INTEGER,
     date_updated: DataTypes.DATE,
     image_uuid: DataTypes.STRING
   }, {

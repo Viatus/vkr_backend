@@ -1,4 +1,4 @@
-const { Sequelize } = require('sequelize');
+const { Sequelize, sequelize } = require('../database/models');
 const models = require('../database/models');
 const Op = Sequelize.Op;
 const {
@@ -42,6 +42,15 @@ const getAllReviews = async (req, res) => {
     });
 }
 
+const getReviewById = async (req, res) => {
+    models.Reviews.findOne({ where: { id: req.params.id }, attributes: ["score", "content"], include: [{ model: models.Clients, required: true, attributes: ["nickname"] }, {model: models.Creations, include: [{model: models.Creation_Names, attributes: ['name']}]}] }).then((result) => {
+        console.log(result);
+        return res.status(StatusCodes.OK).json({ result });
+    }).catch((err) => {
+        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(err);
+    });
+}
+
 const getAverageRatingForCreation = async (req, res) => {
     models.Reviews.findAll({ where: { CreationId: req.params.id }, attributes: ["score"] }).then((result) => {
         const amount = result.length;
@@ -65,7 +74,7 @@ const getReviewsForCreation = async (req, res) => {
 }
 
 const getReviewsByUser = async (req, res) => {
-    models.Reviews.findAll({ where: { ClientId: req.client.id }, attributes: { exclude: ["ClientId", "id", "CreationId"] }, include: [{ model: models.Creations, required: true, attributes: ["id"], include: [{ model: models.Creation_Names, attributes: ['name'] }] }] }).then((result) => {
+    models.Reviews.findAll({ where: { ClientId: req.client.id }, attributes: ["id"] }).then((result) => {
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(err);
@@ -155,4 +164,5 @@ module.exports = {
     getReviewsForCreation,
     getTopCreations,
     getReviewsByUser,
+    getReviewById,
 }

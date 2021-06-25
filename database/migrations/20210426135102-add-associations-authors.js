@@ -19,19 +19,7 @@ module.exports = {
           primaryKey: true,
         },
       }
-    ).then(() => {
-      queryInterface.addColumn(
-        'Authors',
-        'AuthorId',
-        {
-          type: Sequelize.INTEGER,
-          references: {
-            model: 'Authors',
-            key: 'id'
-          }
-        }
-      )
-    })
+    )
   },
   down: (queryInterface, Sequelize) => {
     return queryInterface.dropTable('Participation').then(() => {

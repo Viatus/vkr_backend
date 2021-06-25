@@ -37,10 +37,10 @@ const loginClient = async (req, res) => {
         const match = await bcrypt.compare(password, hashedPassword);
         const is_admin = result.is_admin;
         if (match) {
-            const token = await jwt.sign({ email, id, is_admin }, process.env.secret);
+            const token = await jwt.sign({ email: email, id: id, is_admin: is_admin }, process.env.secret);
             return res.json({ token: token, is_admin: is_admin });
         }
-        return res.status(StatusCodes.UNAUTHORIZED);
+        return res.status(StatusCodes.BAD_REQUEST).json({error: "Неверно введены данные для входа"});
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message });
     });

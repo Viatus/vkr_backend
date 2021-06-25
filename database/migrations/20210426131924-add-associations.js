@@ -25,18 +25,6 @@ module.exports = {
         }
       );
     }).then(() => {
-      queryInterface.addColumn(
-        'Creations',
-        'CreationId',
-        {
-          type: Sequelize.INTEGER,
-          references: {
-            model: 'Creations',
-            key: 'id'
-          }
-        }
-      );
-    }).then(() => {
       queryInterface.createTable(
         'Creation_tags',
         {
@@ -87,11 +75,6 @@ module.exports = {
       return queryInterface.removeColumn(
         'Creations',
         'CreationTypeId'
-      );
-    }).then(() => {
-      return queryInterface.removeColumn(
-        'Creations',
-        'CreationId'
       );
     }).then(() => {
       return queryInterface.dropTable('Creation_tags');

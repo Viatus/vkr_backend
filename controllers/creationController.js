@@ -264,7 +264,7 @@ const approveCreation = async (req, res) => {
                 }*/
             req.body.CreationId = result.dataValues.id;
             req.body.title = "Обсуждение произведения";
-            req.body.content = "Понравилось л ивам данное произведение? Что вы о нем думаете?";
+            req.body.content = "Понравилось ли вам данное произведение? Что вы о нем думаете?";
             addDiscussion(req).then(() => {
 
             });
@@ -282,8 +282,7 @@ const approveCreation = async (req, res) => {
 //Еще раз сюда посмотреть
 const getSimilarCreationsOnTagsById = async (req, res) => {
     //Проверки?
-    console.log(req.body.creation_id);
-    models.Tags.findAll({ include: [{ model: models.Creations, through: 'Creation_Tags', where: { id: req.headers.creation_id } }] }).then((result) => {
+    models.Tags.findAll({ include: [{ model: models.Creations, through: 'Creation_Tags', where: { id: req.params.id } }] }).then((result) => {
         var ids = [];
         for (tag of result) {
             ids.push(tag.id);
@@ -292,7 +291,7 @@ const getSimilarCreationsOnTagsById = async (req, res) => {
         models.Creations.findAll({ include: [{ model: models.Tags, through: "Creation_Tags", where: { id: ids } }, { model: models.Creation_Names, attributes: ['name'] }] }).then((result2) => {
             const tagMap = new Map();
             for (tagCreation of result2) {
-                if (tagCreation.id != req.headers.creation_id && tagCreation.current) {
+                if (tagCreation.id != req.params.id && tagCreation.current) {
                     tagMap.set(tagCreation.id, tagCreation.Tags.length);
                 }
             }
@@ -489,6 +488,13 @@ const getRecommendationsForUser = async (req, res) => {
     }
     //В этом случае теряется порядок и нет ожидаемой оценки(она вроде особо и не нужна, а вот порядок было бы неплохо сохранять)
     models.Creations.findAll({ where: { id: ids }, include: [{ model: models.Creation_Names, attributes: ['name'] }] }).then((result) => {
+        for (cr of result) {
+            for (rating of ratings) {
+                if (cr.dataValues.id == rating[0]) {
+                    cr.dataValues.predicted_rating  = rating[1];
+                }
+            }
+        }
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message });

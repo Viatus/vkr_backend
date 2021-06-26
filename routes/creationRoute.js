@@ -52,7 +52,7 @@ router.get('/creations/:id', getCreationById);
 router.get('/creations', getAllCreations);
 router.post('/creations', verifyToken, multer({ storage: storageConfig }).any("cover"), addCreationRecord);
 router.put('/creations-unapproved/:id', verifyToken, approveCreation);
-router.get('/creations-similar', getSimilarCreationsOnTagsById);
+router.get('/creations-similar/:id', getSimilarCreationsOnTagsById);
 router.get('/creations-unapproved', verifyToken, getUnapprovedCreations);
 router.get('/creations-search', searchCreations);
 router.get('/creation-tags/:id', getCreationTags);

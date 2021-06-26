@@ -66,7 +66,7 @@ const getAverageRatingForCreation = async (req, res) => {
 }
 
 const getReviewsForCreation = async (req, res) => {
-    models.Reviews.findAll({ where: { CreationId: req.params.id }, attributes: { exclude: ["ClientId", "id", "CreationId"] }, include: [{ model: models.Clients, required: true, attributes: ["nickname"] }] }).then((result) => {
+    models.Reviews.findAll({ where: { CreationId: req.params.id }, attributes: { exclude: ["ClientId", "CreationId"] }, include: [{ model: models.Clients, required: true, attributes: ["nickname"] }] }).then((result) => {
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json(err);
@@ -102,7 +102,7 @@ const getTopCreations = async (req, res) => {
         if (req.query.tags === undefined || req.query.tags === []) {
             models.Creations.findAll({
                 attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')),
-                    "avg_rating"]], include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), 'LIKE', req.query.string) } }],
+                    "avg_rating"]], include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
                 group: ['Creations.id', 'Creation_Names.name'],
                 raw: true,
                 order: Sequelize.literal('avg_rating DESC')
@@ -115,7 +115,7 @@ const getTopCreations = async (req, res) => {
         } else {
             models.Creations.findAll({
                 attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
-                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), 'LIKE', req.query.string) } }],
+                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
                 group: ['Creations.id', 'Creation_Names.name'],
                 raw: true,
                 order: Sequelize.literal('avg_rating DESC')
@@ -130,7 +130,7 @@ const getTopCreations = async (req, res) => {
         if (req.query.tags === undefined || req.query.tags === []) {
             models.Creations.findAll({
                 attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
-                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), 'LIKE', req.query.string) } }],
+                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
                 group: ['Creations.id', 'Creation_Names.name'],
                 raw: true,
                 order: Sequelize.literal('avg_rating DESC')
@@ -143,7 +143,7 @@ const getTopCreations = async (req, res) => {
         } else {
             models.Creations.findAll({
                 attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
-                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), 'LIKE', req.query.string) } }],
+                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
                 group: ['Creations.id', 'Creation_Names.name'],
                 raw: true,
                 order: Sequelize.literal('avg_rating DESC')

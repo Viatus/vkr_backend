@@ -7,10 +7,13 @@ const Op = Sequelize.Op;
 const fs = require('fs')
 const { performance } = require('perf_hooks');
 const { addDiscussion } = require('./discussionController');
+require('dotenv').config();
 
-currentDistanceMethod = 5;
+currentDistanceMethod = process.env.DEFAULT_DISTANCE_METHOD;
+currentRecsMethod = process.env.DEFAULT_RECS_METHOD;
 distancesGlobal = {};
 matrixGlobal = {};
+predictedScoresGlobal = {};
 
 const addCreationType = async (req, res) => {
     if (!req.client.is_admin) {
@@ -347,6 +350,15 @@ const getSimilarCreationsOnAuthorsById = async (req, res) => {
 
 }
 
+const getPredictedScoreForCreation = async (req, res) => {
+    for (score of predictedScoresGlobal[req.client.id]) {
+        if (score[0] == req.params.id) {
+            return res.status(StatusCodes.OK).json({ result: score[1] });
+        }
+    }
+    return res.status(StatusCodes.NOT_FOUND);
+}
+
 const getUnapprovedCreations = async (req, res) => {
     if (!req.client.is_admin) {
         return res.status(StatusCodes.UNAUTHORIZED).json({ error: "Недостаточно привелегий" });
@@ -491,7 +503,7 @@ const getRecommendationsForUser = async (req, res) => {
         for (cr of result) {
             for (rating of ratings) {
                 if (cr.dataValues.id == rating[0]) {
-                    cr.dataValues.predicted_rating  = rating[1];
+                    cr.dataValues.predicted_rating = rating[1];
                 }
             }
         }
@@ -523,7 +535,11 @@ callCalculateDistances = function () {
             matrixGlobal = matrix;
             distancesGlobal = calculateDistances(matrix, currentDistanceMethod);
             console.log("distances recalculated");
-            setTimeout(callCalculateDistances, 1000 * 60 * 10);
+            for (cl of clients) {
+                let predictedScores = calculateRecommendedCreations(distancesGlobal, matrixGlobal, cl.dataValues.id, 10, Number.MAX_VALUE, 0, currentRecsMethod);
+                predictedScoresGlobal[cl.dataValues.id] = predictedScores;
+            }
+            setTimeout(callCalculateDistances, 1000 * process.env.RECOMMENDATION_INTERVAL);
         })
     });
 }
@@ -1018,7 +1034,7 @@ const constructUserTree = function (dataset, neighbourUsers) {
 //2 - Weighted sum method
 //3 - Adjusted weighted method
 //4 - TOPSIS method
-const calculateRecommendedCreations = function (distances, dataset, userId, numberOfCritics, numberOfRecs, boundaryRating, methodCode) {
+const calculateRecommendedCreations = function (distances, dataset, userId, numberOfCritics, numberOfRecs, boundaryRating, methodCode, isUsingRelated) {
     let critics = [];
     for (var user in distances[userId]) {
         if (user != userId) {
@@ -1109,7 +1125,7 @@ const calculateRecommendedCreations = function (distances, dataset, userId, numb
                 }
 
                 let totalRating = userAvgRating + topSum / botSum;
-                console.log(totalRating);
+                //console.log(totalRating);
                 if (totalRating > boundaryRating) {
                     ratings.push([candidate, totalRating]);
                 }
@@ -1252,86 +1268,86 @@ const executeSingleSample = function (baseFile, testFile, outputFile, distanceMe
                 }
             }
             //Далее считается так: если оценка больше двух: пользователь был заинтересова в произведении, иначе - нет
-            let result = { tp: 0, fp: 0, fn: 0 };
-            var calculateRecommendedCreationsExecutionTimeSum = 0;
-            var sumOfRatingDiffs = 0;
-            var sumOfSquareRatingDiffs = 0;
-            var numberOfPredictions = 0;
-            for (user in matrix) {
-                let beforeCalculateRecommendedCreations = performance.now();
-                let recs = calculateRecommendedCreations(distances, matrix, user, amountOfNeighbours, amountOfRecs, 2, recMethodCode);
-                calculateRecommendedCreationsExecutionTimeSum += performance.now() - beforeCalculateRecommendedCreations;
-                var recsInUserInterests = 0;
-                for (rec of recs) {
-                    if (matrixTest[user] !== undefined) {
-                        if (matrixTest[user][rec[0]] !== undefined) {
-                            numberOfPredictions++;
-                            sumOfRatingDiffs += Math.abs(matrixTest[user][rec[0]] - Math.round(rec[1]));
-                            sumOfSquareRatingDiffs += Math.pow(matrixTest[user][rec[0]] - Math.round(rec[1]), 2);
-                            if (matrixTest[user][rec[0]] > 2) {
-                                recsInUserInterests++;
+            for (var i = recMethodCode; i <= 4; i++) {
+                let newOutputFile = './recommendation_tests/u2.result' + '_' + distanceMethodCode + '_' + i + '_' + 10 + '_' + 10;
+                let result = { tp: 0, fp: 0, fn: 0 };
+                var calculateRecommendedCreationsExecutionTimeSum = 0;
+                var sumOfRatingDiffs = 0;
+                var sumOfSquareRatingDiffs = 0;
+                var numberOfPredictions = 0;
+                for (user in matrix) {
+                    let beforeCalculateRecommendedCreations = performance.now();
+                    let recs = calculateRecommendedCreations(distances, matrix, user, amountOfNeighbours, amountOfRecs, 2, i);
+                    calculateRecommendedCreationsExecutionTimeSum += performance.now() - beforeCalculateRecommendedCreations;
+                    var recsInUserInterests = 0;
+                    for (rec of recs) {
+                        if (matrixTest[user] !== undefined) {
+                            if (matrixTest[user][rec[0]] !== undefined) {
+                                numberOfPredictions++;
+                                sumOfRatingDiffs += Math.abs(matrixTest[user][rec[0]] - Math.round(rec[1]));
+                                sumOfSquareRatingDiffs += Math.pow(matrixTest[user][rec[0]] - Math.round(rec[1]), 2);
+                                if (matrixTest[user][rec[0]] > 2) {
+                                    recsInUserInterests++;
+                                }
                             }
                         }
                     }
-                }
-                result.tp += recsInUserInterests;
-                result.fp += recs.length - recsInUserInterests;
-                for (creation in matrixTest[user]) {
-                    if (matrixTest[user][creation] > 2) {
-                        result.fn++;
+                    result.tp += recsInUserInterests;
+                    result.fp += recs.length - recsInUserInterests;
+                    for (creation in matrixTest[user]) {
+                        if (matrixTest[user][creation] > 2) {
+                            result.fn++;
+                        }
                     }
+                    result.fn -= recsInUserInterests;
                 }
-                result.fn -= recsInUserInterests;
-            }
-            let test = {};
-            //Execution time
-            test.distanceTime = calculateDistancesExecutionTime;
-            test.recAverageTime = calculateRecommendedCreationsExecutionTimeSum / Object.keys(matrix).length;
-            //classification accuracy
-            test.precision = result.tp / (result.tp + result.fp);
-            test.recall = result.tp / (result.tp + result.fn);
-            test.f_measure = 2 * ((result.tp / (result.tp + result.fp)) * (result.tp / (result.tp + result.fn))) / (result.tp / (result.tp + result.fn) + result.tp / (result.tp + result.fp));
-            //Predictive accuracy
-            test.MAE = sumOfRatingDiffs / numberOfPredictions;
-            test.RMSE = Math.sqrt(sumOfSquareRatingDiffs / numberOfPredictions);
-            fs.writeFile(outputFile, JSON.stringify(test), function (err) {
-                if (err) return console.log(err);
-                //console.log('value written for ' + baseFile + ': ' + JSON.stringify(test));
-                console.log("finished " + distanceMethodCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs);
-                if (distanceMethodCode < 8 || recMethodCode < 4 || amountOfNeighbours < 50 || amountOfRecs < 50) {
-                    var newAmountOfRecs, newAmountOfNeighbours, newRecMethodCode, newDistanceMethodCode;
-                    if (amountOfRecs < 50) {
-                        newAmountOfRecs = 50;
-                        newAmountOfNeighbours = amountOfNeighbours;
-                        newRecMethodCode = recMethodCode;
-                        newDistanceMethodCode = distanceMethodCode;
-                    } else {
-                        newAmountOfRecs = 10;
-                        if (amountOfNeighbours < 50) {
-                            newAmountOfNeighbours = 50;
+                let test = {};
+                //Execution time
+                test.distanceTime = calculateDistancesExecutionTime;
+                test.recAverageTime = calculateRecommendedCreationsExecutionTimeSum / Object.keys(matrix).length;
+                //classification accuracy
+                test.precision = result.tp / (result.tp + result.fp);
+                test.recall = result.tp / (result.tp + result.fn);
+                test.f_measure = 2 * ((result.tp / (result.tp + result.fp)) * (result.tp / (result.tp + result.fn))) / (result.tp / (result.tp + result.fn) + result.tp / (result.tp + result.fp));
+                //Predictive accuracy
+                test.MAE = sumOfRatingDiffs / numberOfPredictions;
+                test.RMSE = Math.sqrt(sumOfSquareRatingDiffs / numberOfPredictions);
+                fs.writeFile(newOutputFile, JSON.stringify(test), function (err) {
+                    if (err) return console.log(err);
+                    //console.log('value written for ' + baseFile + ': ' + JSON.stringify(test));
+                    console.log("finished " + distanceMethodCode + '_' + i + '_' + amountOfNeighbours + '_' + amountOfRecs);
+                    /*if (recMethodCode < 4 || amountOfNeighbours < 30 || amountOfRecs < 30) {
+                        var newAmountOfRecs, newAmountOfNeighbours, newRecMethodCode, newDistanceMethodCode;
+                        if (amountOfRecs < 30) {
+                            newAmountOfRecs = 30;
+                            newAmountOfNeighbours = amountOfNeighbours;
                             newRecMethodCode = recMethodCode;
                             newDistanceMethodCode = distanceMethodCode;
                         } else {
-                            newAmountOfNeighbours = 10;
-                            if (recMethodCode < 4) {
-                                newRecMethodCode = recMethodCode + 1;
+                            newAmountOfRecs = 10;
+                            if (amountOfNeighbours < 50) {
+                                newAmountOfNeighbours = 30;
+                                newRecMethodCode = recMethodCode;
                                 newDistanceMethodCode = distanceMethodCode;
                             } else {
-                                newRecMethodCode = 1;
-                                newDistanceMethodCode = distanceMethodCode + 1;
+                                newAmountOfNeighbours = 10;
+                                if (recMethodCode < 4) {
+                                    newRecMethodCode = recMethodCode + 1;
+                                    newDistanceMethodCode = distanceMethodCode;
+                                }
                             }
                         }
-                    }
-                    executeSingleSample('./recommendation_tests/u1.base', './recommendation_tests/u1.test', './recommendation_tests/u1.result' + '_' + newDistanceMethodCode + '_' + newRecMethodCode + '_' + newAmountOfNeighbours + '_' + newAmountOfRecs, newDistanceMethodCode, newRecMethodCode, newAmountOfNeighbours, newAmountOfRecs);
-                }
-            });
+                        executeSingleSample('./recommendation_tests/u1.base', './recommendation_tests/u1.test', './recommendation_tests/u1.result' + '_' + newDistanceMethodCode + '_' + newRecMethodCode + '_' + newAmountOfNeighbours + '_' + newAmountOfRecs, newDistanceMethodCode, newRecMethodCode, newAmountOfNeighbours, newAmountOfRecs);
+                    }*/
+                });
+            }
 
         });
     })
 }
 
 const executeTest = async (req, res) => {
-    executeSingleSample('./recommendation_tests/u1.base', './recommendation_tests/u1.test', './recommendation_tests/u1.result' + '_' + 1 + '_' + 1 + '_' + 10 + '_' + 10, 1, 1, 10, 10);
+    executeSingleSample('./recommendation_tests/u2.base', './recommendation_tests/u2.test', './recommendation_tests/u2.result' + '_' + 8 + '_' + 2 + '_' + 10 + '_' + 10, 8, 2, 10, 10);
     //executeSingleSample('./recommendation_tests/u2.base', './recommendation_tests/u2.test', './recommendation_tests/u2.result' + '_' + distanceMethodeCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs, distanceMethodeCode, recMethodCode, amountOfNeighbours, amountOfRecs);
     //executeSingleSample('./recommendation_tests/u3.base', './recommendation_tests/u3.test', './recommendation_tests/u3.result' + '_' + distanceMethodeCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs, distanceMethodeCode, recMethodCode, amountOfNeighbours, amountOfRecs);
     //executeSingleSample('./recommendation_tests/u4.base', './recommendation_tests/u4.test', './recommendation_tests/u4.result' + '_' + distanceMethodeCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs, distanceMethodeCode, recMethodCode, amountOfNeighbours, amountOfRecs);
@@ -1365,4 +1381,5 @@ module.exports = {
     executeTest,
     callCalculateDistances,
     changeCalculateDistanceMethod,
+    getPredictedScoreForCreation,
 }

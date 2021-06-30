@@ -119,13 +119,18 @@ const getAuthors = async (req, res) => {
         req.query.string = "%" + req.query.string + "%";
     }
 
-    models.Authors.findAll({ attributes: ['id', 'name'], where: { current: true }, where: { name: { [Op.like]: req.query.string } }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+    if (req.query.current === undefined) {
+        req.query.current = true;
+    }
+
+    models.Authors.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string }, current: req.query.current }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
     });
 };
 
+//Заменить на ту что выше?
 const getUnapprovedAuthors = async (req, res) => {
     if (req.query.sort_order === undefined) {
         req.query.sort_order = 'ASC';

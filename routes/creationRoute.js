@@ -29,6 +29,7 @@ const {
     getRecommendationsForUser,
     executeTest,
     changeCalculateDistanceMethod,
+    getPredictedScoreForCreation,
 } = require('../controllers/creationController');
 const { v4: uuidv4 } = require('uuid');
 const path = require("path");
@@ -77,5 +78,7 @@ router.get('/user-profile-recs', verifyToken, getRecommendationsForUser);
 router.get('/rec-test', executeTest);
 
 router.post('/rec-method', verifyToken, changeCalculateDistanceMethod);
+
+router.get('/predict-score/:id', verifyToken, getPredictedScoreForCreation);
 
 module.exports = router;

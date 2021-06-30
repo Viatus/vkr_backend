@@ -68,8 +68,7 @@ const addCreationRecord = async (req, res) => {
             if (result === undefined) {
                 return res.status(StatusCodes.BAD_REQUEST).json({ error: "Такого жанра не существует" });
             }
-            //ПОПРАВИТЬ ДАТУ !!!!
-            const newCreation = await models.Creations.create({ CreationTypeId: result.id, date_published: req.body.date_published, description: req.body.description, country: req.body.country, age_rating: req.body.age_rating, ClientId: req.client.id, current: false, date_updated: "2020-01-01 19:20:00", image_uuid: req.image_uuid });
+            const newCreation = await models.Creations.create({ CreationTypeId: result.id, date_published: req.body.date_published, description: req.body.description, country: req.body.country, age_rating: req.body.age_rating, ClientId: req.client.id, current: false, date_updated: Date.now(), image_uuid: req.image_uuid });
             console.log(newCreation);
             //req.creation_id = newCreation.id;
             //if (req.body.name !== undefined) {
@@ -221,7 +220,6 @@ const getAllTags = async (req, res) => {
 
 
 const removeCreation = async (req, res) => {
-    //Временно закомментировано
     if (!req.client.is_admin) {
         return res.status(StatusCodes.UNAUTHORIZED).json({ error: "Недостаточно прав" });
     }
@@ -282,15 +280,12 @@ const approveCreation = async (req, res) => {
 };
 
 
-//Еще раз сюда посмотреть
 const getSimilarCreationsOnTagsById = async (req, res) => {
-    //Проверки?
     models.Tags.findAll({ include: [{ model: models.Creations, through: 'Creation_Tags', where: { id: req.params.id } }] }).then((result) => {
         var ids = [];
         for (tag of result) {
             ids.push(tag.id);
         }
-        //Не забыть проверить работает ли оно вообще(вроде работает?)
         models.Creations.findAll({ include: [{ model: models.Tags, through: "Creation_Tags", where: { id: ids } }, { model: models.Creation_Names, attributes: ['name'] }] }).then((result2) => {
             const tagMap = new Map();
             for (tagCreation of result2) {
@@ -331,13 +326,11 @@ const getSimilarCreationsOnTagsById = async (req, res) => {
 }
 
 const getSimilarCreationsOnAuthorsById = async (req, res) => {
-    //Можно подправить первый запрос, он ыбл скопирован из другой функции и все что нужно ищет, но можно было б чуть по другому сдлетаь
     models.Roles.findAll({ include: [{ model: models.Authors, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id } }] }).then((result2) => {
         let authors = [];
         for (element of result2) {
             authors.push(element.Authors[0].id);
         }
-        //Тоже проверить не убилось ли оно
         models.Creations.findAll({ include: [{ model: models.Authors, through: "Participation", where: { id: authors } }, { model: models.Creation_Names, attributes: ['name'] }], where: { id: { [Sequelize.Op.not]: req.params.id } } }).then((result) => {
             result.sort((a, b) => (a.dataValues.Authors.length > b.dataValues.Authors.length) ? -1 : (b.dataValues.Authors.length > a.dataValues.Authors.length) ? 1 : 0);
             return res.status(StatusCodes.OK).json({ result });
@@ -370,7 +363,6 @@ const getUnapprovedCreations = async (req, res) => {
     if (req.query.sort_param === undefined) {
         req.query.sort_param = 'name';
     }
-    //Оживить сортировку
     models.Creations.findAll({ attributes: ['id', 'CreationTypeId'], include: [{ model: models.Creation_Names, attributes: ['name'] }], where: { current: false }/*, order: [[req.query.sort_param, req.query.sort_order]]*/ }).then((result) => {
         return res.json({ result });
     }).catch((err) => {
@@ -411,7 +403,6 @@ const searchCreations = async (req, res) => {
     if (req.query.page === undefined) {
         req.query.page = 1;
     }
-    //Сортировку оживить
     models.Creations.findAll({ attributes: ['id'], include: [{ model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('name')), 'LIKE', req.query.string) } }], where: { current: true }, /*order: [[req.query.sort_param, req.query.sort_order]],*/ limit: req.query.limit, offset: (req.query.page - 1) * req.query.limit }).then((result) => {
         return res.json({ result });
     }).catch((err) => {
@@ -498,7 +489,6 @@ const getRecommendationsForUser = async (req, res) => {
     for (rating of ratings) {
         ids.push(rating[0]);
     }
-    //В этом случае теряется порядок и нет ожидаемой оценки(она вроде особо и не нужна, а вот порядок было бы неплохо сохранять)
     models.Creations.findAll({ where: { id: ids }, include: [{ model: models.Creation_Names, attributes: ['name'] }] }).then((result) => {
         for (cr of result) {
             for (rating of ratings) {
@@ -1151,7 +1141,6 @@ const calculateRecommendedCreations = function (distances, dataset, userId, numb
         }
         //console.log(decisionMatrix['2']);
 
-        //Determine positive and negative ideal solutions(мб идеальное это максимальная похожесть и максимальный рейтинг, а негативное наоборот?)
         let solutions = { ideal: {}, negativeIdeal: {} };
         var avgSimilarity = 0;
         for (critic of critics) {

@@ -39,8 +39,7 @@ const addComment = async (req, res) => {
     if (req.body.DiscussionId === undefined || req.body.content === undefined) {
         return res.status(StatusCodes.BAD_REQUEST).json({ message: 'Отстутствует id обсуждения или содержимое комментария' });
     }
-    //Дату публикации думаю все же здесь устанавливать а не на клиентской части?
-    models.Comments.create({ DiscussionId: req.body.DiscussionId, content: req.body.content, ClientId: req.client.id, datePublished: req.body.datePublished, parentComment: req.body.parentComment }).then((result) => {
+    models.Comments.create({ DiscussionId: req.body.DiscussionId, content: req.body.content, ClientId: req.client.id, datePublished: Date.now(), parentComment: req.body.parentComment }).then((result) => {
         console.log(result);
         return res.status(StatusCodes.CREATED).json({ result });
     }).catch((err) => {

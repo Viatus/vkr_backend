@@ -43,7 +43,7 @@ const getAllReviews = async (req, res) => {
 }
 
 const getReviewById = async (req, res) => {
-    models.Reviews.findOne({ where: { id: req.params.id }, attributes: ["score", "content"], include: [{ model: models.Clients, required: true, attributes: ["nickname"] }, {model: models.Creations, include: [{model: models.Creation_Names, attributes: ['name']}]}] }).then((result) => {
+    models.Reviews.findOne({ where: { id: req.params.id }, attributes: ["score", "content"], include: [{ model: models.Clients, required: true, attributes: ["nickname"] }, { model: models.Creations, include: [{ model: models.Creation_Names, attributes: ['name'] }] }] }).then((result) => {
         console.log(result);
         return res.status(StatusCodes.OK).json({ result });
     }).catch((err) => {
@@ -98,61 +98,124 @@ const getTopCreations = async (req, res) => {
     } else {
         req.query.string = "%" + req.query.string.toLowerCase() + "%";
     }
-    if (req.query.genres === undefined || req.query.genres === []) {
-        if (req.query.tags === undefined || req.query.tags === []) {
-            models.Creations.findAll({
-                attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')),
-                    "avg_rating"]], include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
-                group: ['Creations.id', 'Creation_Names.name'],
-                raw: true,
-                order: Sequelize.literal('avg_rating DESC')
-            }).then((result) => {
-                let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
-                return res.json(slicedRes);
-            }).catch((err) => {
-                return res.status(500).json({ error: err.message });
-            });
+    if (req.query.searchType === "рейтингу") {
+        if (req.query.genres === undefined || req.query.genres === []) {
+            if (req.query.tags === undefined || req.query.tags === []) {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')),
+                        "avg_rating"]], include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_Names, attributes: ['name'], limit: 1, where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    where: {current: true},
+                    order: Sequelize.literal('avg_rating DESC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            } else {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
+                    include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    order: Sequelize.literal('avg_rating DESC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            }
         } else {
-            models.Creations.findAll({
-                attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
-                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
-                group: ['Creations.id', 'Creation_Names.name'],
-                raw: true,
-                order: Sequelize.literal('avg_rating DESC')
-            }).then((result) => {
-                let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
-                return res.json(slicedRes);
-            }).catch((err) => {
-                return res.status(500).json({ error: err.message });
-            });
+            if (req.query.tags === undefined || req.query.tags === []) {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
+                    include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    where: {current: true},
+                    order: Sequelize.literal('avg_rating DESC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            } else {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
+                    include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    order: Sequelize.literal('avg_rating DESC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            }
         }
     } else {
-        if (req.query.tags === undefined || req.query.tags === []) {
-            models.Creations.findAll({
-                attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
-                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
-                group: ['Creations.id', 'Creation_Names.name'],
-                raw: true,
-                order: Sequelize.literal('avg_rating DESC')
-            }).then((result) => {
-                let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
-                return res.json(slicedRes);
-            }).catch((err) => {
-                return res.status(500).json({ error: err.message });
-            });
+        if (req.query.genres === undefined || req.query.genres === []) {
+            if (req.query.tags === undefined || req.query.tags === []) {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')),
+                        "avg_rating"]], include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    where: {current: true},
+                    order: Sequelize.literal('name ASC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            } else {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
+                    include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    order: Sequelize.literal('name ASC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            }
         } else {
-            models.Creations.findAll({
-                attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
-                include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
-                group: ['Creations.id', 'Creation_Names.name'],
-                raw: true,
-                order: Sequelize.literal('avg_rating DESC')
-            }).then((result) => {
-                let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
-                return res.json(slicedRes);
-            }).catch((err) => {
-                return res.status(500).json({ error: err.message });
-            });
+            if (req.query.tags === undefined || req.query.tags === []) {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
+                    include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    order: Sequelize.literal('name ASC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            } else {
+                models.Creations.findAll({
+                    attributes: ["Creations.id", [Sequelize.fn('AVG', Sequelize.col('creation_reviews.score')), "avg_rating"]],
+                    include: [{ model: models.Reviews, as: "creation_reviews", attributes: [] }, { model: models.Creation_types, attributes: [], where: { id: req.query.genres } }, { model: models.Tags, through: { attributes: [] }, attributes: [], where: { id: req.query.tags } }, { model: models.Creation_Names, attributes: ['name'], where: { name: sequelize.where(sequelize.fn('LOWER', sequelize.col('Creation_Names.name')), 'LIKE', req.query.string) } }],
+                    group: ['Creations.id', 'Creation_Names.name'],
+                    raw: true,
+                    order: Sequelize.literal('name ASC')
+                }).then((result) => {
+                    let slicedRes = result.slice((req.query.page - 1) * req.query.limit, req.query.page * req.query.limit);
+                    return res.json(slicedRes);
+                }).catch((err) => {
+                    return res.status(500).json({ error: err.message });
+                });
+            }
         }
     }
 }

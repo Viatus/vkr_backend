@@ -90,7 +90,7 @@ const addCreationRecord = async (req, res) => {
                 });
             }
             console.log(newCreation);
-            return res.status(StatusCodes.CREATED).json({ newCreation });
+            return res.status(StatusCodes.OK).json({ newCreation });
         } catch (error) {
             console.log(error.message);
             return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message })
@@ -326,10 +326,10 @@ const getSimilarCreationsOnTagsById = async (req, res) => {
 }
 
 const getSimilarCreationsOnAuthorsById = async (req, res) => {
-    models.Roles.findAll({ include: [{ model: models.Authors, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id } }] }).then((result2) => {
+    models.Authors.findAll({ include: [{ model: models.Roles, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id } }] }).then((result2) => {
         let authors = [];
         for (element of result2) {
-            authors.push(element.Authors[0].id);
+            authors.push(element.id);
         }
         models.Creations.findAll({ include: [{ model: models.Authors, through: "Participation", where: { id: authors } }, { model: models.Creation_Names, attributes: ['name'] }], where: { id: { [Sequelize.Op.not]: req.params.id } } }).then((result) => {
             result.sort((a, b) => (a.dataValues.Authors.length > b.dataValues.Authors.length) ? -1 : (b.dataValues.Authors.length > a.dataValues.Authors.length) ? 1 : 0);
@@ -1205,6 +1205,7 @@ const calculateRecommendedCreations = function (distances, dataset, userId, numb
     ratings.sort(function (a, b) {
         return b[1] - a[1];
     });
+    //console.log(ratings);
     ratings = ratings.slice(0, numberOfRecs);
     return ratings;
 }
@@ -1267,6 +1268,7 @@ const executeSingleSample = function (baseFile, testFile, outputFile, distanceMe
                 for (user in matrix) {
                     let beforeCalculateRecommendedCreations = performance.now();
                     let recs = calculateRecommendedCreations(distances, matrix, user, amountOfNeighbours, amountOfRecs, 2, i);
+                    console.log(recs);
                     calculateRecommendedCreationsExecutionTimeSum += performance.now() - beforeCalculateRecommendedCreations;
                     var recsInUserInterests = 0;
                     for (rec of recs) {
@@ -1336,7 +1338,7 @@ const executeSingleSample = function (baseFile, testFile, outputFile, distanceMe
 }
 
 const executeTest = async (req, res) => {
-    executeSingleSample('./recommendation_tests/u2.base', './recommendation_tests/u2.test', './recommendation_tests/u2.result' + '_' + 8 + '_' + 2 + '_' + 10 + '_' + 10, 8, 2, 10, 10);
+    executeSingleSample('./recommendation_tests/u1.base', './recommendation_tests/u2.test', './recommendation_tests/u1.result' + '_' + 8 + '_' + 2 + '_' + 10 + '_' + 10, 3, 4, 10, 10);
     //executeSingleSample('./recommendation_tests/u2.base', './recommendation_tests/u2.test', './recommendation_tests/u2.result' + '_' + distanceMethodeCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs, distanceMethodeCode, recMethodCode, amountOfNeighbours, amountOfRecs);
     //executeSingleSample('./recommendation_tests/u3.base', './recommendation_tests/u3.test', './recommendation_tests/u3.result' + '_' + distanceMethodeCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs, distanceMethodeCode, recMethodCode, amountOfNeighbours, amountOfRecs);
     //executeSingleSample('./recommendation_tests/u4.base', './recommendation_tests/u4.test', './recommendation_tests/u4.result' + '_' + distanceMethodeCode + '_' + recMethodCode + '_' + amountOfNeighbours + '_' + amountOfRecs, distanceMethodeCode, recMethodCode, amountOfNeighbours, amountOfRecs);

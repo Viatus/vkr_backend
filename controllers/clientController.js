@@ -10,7 +10,7 @@ const registerClient = async (req, res) => {
     const { nickname, email, password } = req.body;
     models.Clients.findOne({ where: { email: email } }).then(async (result) => {
         if (result) {
-            return res.status(401).json({ err: 'user already exists' });
+            return res.status(StatusCodes.BAD_REQUEST).json({ err: 'user already exists' });
         }
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 

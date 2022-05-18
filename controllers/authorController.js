@@ -120,14 +120,19 @@ const getAuthors = async (req, res) => {
     }
 
     if (req.query.current === undefined) {
-        req.query.current = true;
+        models.Authors.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string } }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+            return res.status(StatusCodes.OK).json({ result });
+        }).catch((err) => {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
+        });
+    } else {
+        models.Authors.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string }, current: req.query.current }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
+            return res.status(StatusCodes.OK).json({ result });
+        }).catch((err) => {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
+        });
     }
 
-    models.Authors.findAll({ attributes: ['id', 'name'], where: { name: { [Op.like]: req.query.string }, current: req.query.current }, order: [[req.query.sort_param, req.query.sort_order]] }).then(async (result) => {
-        return res.status(StatusCodes.OK).json({ result });
-    }).catch((err) => {
-        return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: err.message })
-    });
 };
 
 //Заменить на ту что выше?
@@ -171,7 +176,7 @@ const getAuthorsRoles = async (req, res) => {
 };
 
 const getInvolvedInCreation = async (req, res) => {
-    models.Roles.findAll({ include: [{ model: models.Authors, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id }, include: [{ model: models.Creation_Names, attributes: ['name'] }] }] }).then((result) => {
+    models.Authors.findAll({ include: [{ model: models.Roles, through: "Participation" }, { model: models.Creations, through: "Participation", where: { id: req.params.id }, include: [{ model: models.Creation_Names, attributes: ['name'] }] }] }).then((result) => {
         return res.status(StatusCodes.OK).json({ result });
     }).catch((error) => {
         return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ error: error.message });
